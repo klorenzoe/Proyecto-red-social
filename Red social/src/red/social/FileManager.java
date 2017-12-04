@@ -1,4 +1,3 @@
-
 package red.social;
 
 import java.io.BufferedWriter;
@@ -677,7 +676,39 @@ class Secuencial
             if(!path.equals(FileManager.BACKUP_FILE) && newLine.split(Pattern.quote(FileManager.SEPARADOR))[FileManager.GetIndexOf(path, "status")].equals("0")) continue;
 
             while (tempFile.getFilePointer() != tempFile.length())
-            
+            {
+               seek = tempFile.getFilePointer();
+               tempLine = tempFile.readLine();
+               String newLineKeyJoined = "", tempLineKeyJoined = "";
+               
+               for (String key : keys)
+               {
+                  newLineKeyJoined += newLine.split(Pattern.quote(FileManager.SEPARADOR))[Integer.parseInt(key)];
+                  tempLineKeyJoined += tempLine.split(Pattern.quote(FileManager.SEPARADOR))[Integer.parseInt(key)];
+               }
+               // Se verifica que tipo de ordenamiento se requiere
+               if ("ASC".equals(sort))
+               {
+                  // first, transfer register from binnacle
+                  if (newLineKeyJoined.compareTo(tempLineKeyJoined) <= 0)
+                  {
+                     break;
+                  }
+
+               }
+               else if ("DES".equals(sort))
+               {
+                  if (newLineKeyJoined.compareTo(tempLineKeyJoined) >= 0)
+                  {
+                     break;
+                  }
+
+               }
+               if (tempFile.getFilePointer() == tempFile.length())
+               {
+                  seek = tempFile.getFilePointer();
+               }
+            }
             if (seek >= tempFile.length())
             {
                tempFile.writeBytes(newLine + "\r\n");
@@ -712,7 +743,40 @@ class Secuencial
             if(!path.equals(FileManager.BACKUP_FILE) && newLine.split(Pattern.quote(FileManager.SEPARADOR))[FileManager.GetIndexOf(path, "status")].equals("0")) continue;
             
             while (tempFile.getFilePointer() != tempFile.length())
-            
+            {
+               seek = tempFile.getFilePointer();
+               tempLine = tempFile.readLine();
+               
+               String newLineKeyJoined = "", tempLineKeyJoined = "";
+               
+               for (String key : keys)
+               {
+                  newLineKeyJoined += newLine.split(Pattern.quote(FileManager.SEPARADOR))[Integer.parseInt(key)];
+                  tempLineKeyJoined += tempLine.split(Pattern.quote(FileManager.SEPARADOR))[Integer.parseInt(key)];
+               }
+               // Sort
+               if ("ASC".equals(sort))
+               {
+                  // first, transfer register from binnacle
+                  if (newLineKeyJoined.compareTo(tempLineKeyJoined) <= 0)
+                  {
+                     break;
+                  }
+
+               }
+               else if ("DES".equals(sort))
+               {
+                  if (newLineKeyJoined.compareTo(tempLineKeyJoined) >= 0)
+                  {
+                     break;
+                  }
+
+               }
+               if (tempFile.getFilePointer() == tempFile.length())
+               {
+                  seek = tempFile.getFilePointer();
+               }
+            }
             if (seek >= tempFile.length())
             {
                tempFile.writeBytes(newLine+ "\r\n");
@@ -1895,7 +1959,7 @@ class ArbolBinario{
    {
       if(!FileManager.FileExists(path))
          {
-            return null;
+            return "";
          }
          
          try
@@ -1933,7 +1997,7 @@ class ArbolBinario{
             }
             //se cierra el descriptor del indice.
             descriptionFile.close();            
-            if (First == 0) return null;
+            if (First == 0) return "";
             
             RandomAccessFile masterFile = FileManager.OpenFile( FileManager.MASTER + path);
             
@@ -1966,7 +2030,7 @@ class ArbolBinario{
             return data;
          }
          catch (IOException | NumberFormatException ex){
-            return null;
+            return "";
          }
                  
          

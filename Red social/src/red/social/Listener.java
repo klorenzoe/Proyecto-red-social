@@ -9,6 +9,8 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -25,11 +27,11 @@ public class Listener extends Thread {
     private Notificacion not;  
 
     Listener(Connection conn) throws SQLException {
-		this.conn = conn;
-		this.pgconn = (org.postgresql.PGConnection)conn;
-		Statement stmt = conn.createStatement();
-		stmt.execute("LISTEN q_event");
-		stmt.close();
+            this.conn = conn;
+            this.pgconn = (org.postgresql.PGConnection)conn;
+            Statement stmt = conn.createStatement();
+            stmt.execute("LISTEN q_event");
+            stmt.close();
     }
 
     public void run() {
@@ -41,30 +43,41 @@ public class Listener extends Thread {
                 rs.close();
                 stmt.close();
 
-				//recibe las notificaciones de JDBC
                 org.postgresql.PGNotification notifications[] = pgconn.getNotifications();
                 if (notifications != null) {
                     for (int i=0; i<notifications.length; i++) {
-                        //Descomponer el json que accion es en esta parte notifications[i] es cada una de las notificaciones de postgresql 
-                        String action = "";
+                        //Descomponer que accion es en esta parte
+                        String parameter = notifications[i].getParameter().replace("\\","");
+                        String action = parameter.split("\\{")[1].split(",")[1].split(":")[1].substring(2,8);
                                           
                         if(action.equals("INSERT")){
                             //comprobar si es para mi
                             
-                            id = "";
-                            grupoReceptor = "";
-                            grupoEmisor = "";                           
-                            boolean existe = false;
+                            id = parameter.split("\\{")[2].replace("}","").split(",")[0].split(":")[1];
+                            grupoReceptor = parameter.split("\\{")[2].replace("}","").split(",")[2].split(":")[1].replace("\"", "");
+                            grupoEmisor = parameter.split("\\{")[2].replace("}","").split(",")[1].split(":")[1].replace("\"", "");
+                            String usuarioEmisor = parameter.split("\\{")[2].replace("}","").split(",")[3].split(":")[1].replace("\"", "");
+                            String usuarioReceptor = parameter.split("\\{")[2].replace("}","").split(",")[4].split(":")[1].replace("\"", "");
+                            String mensaje = parameter.split("\\{")[2].replace("}","").split(",")[6].split(":")[1].replace("\"", "");
+                            String date = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date());
                             
-                            if(grupoReceptor.equals("1")){
+                            if (mensaje.length() > 140){
+                                mensaje = mensaje.substring(0, 139);
+                            }
+                            
+                            if(grupoReceptor.equals("4")){
                                 //si es para mi enviar el update con la respuesta
-                                Singleton.getInstancia().setMensaje("El grupo " + grupoReceptor + " te ha enviado un mensaje." );
+                                Singleton.getInstancia().setMensaje(usuarioEmisor + " del grupo " + grupoEmisor + " le ha enviado un mensaje al usuario: " + usuarioReceptor);
+                                
                                 not = new Notificacion();
                                 not.setVisible(true);
                              
                                 //si es para mi enviar el update con la respuesta de que el usuario existe
-                                
+                                //AQUI VA A LA BUSQUEDA EN NNUESTROS ARCHIVOS
+                                boolean existe = FileManager.SearchUser(usuarioReceptor) != (null);
                                 if(existe){
+                                    //se guarda mensaje para el usuario receptor
+                                FileManager.WriteFile(FileManager.MESSAGE_FILE, FileManager.FixSize(usuarioEmisor  + " (grupo "+ grupoEmisor +")" + FileManager.SEPARADOR + usuarioReceptor + FileManager.SEPARADOR + date + FileManager.SEPARADOR + mensaje + FileManager.SEPARADOR + "1" +FileManager.SEPARADOR+ "1" + FileManager.SEPARADOR, 210));
                                     Singleton.getInstancia().Update(id, existe);
                                 }else{
                                     Singleton.getInstancia().Update(id, existe);
@@ -75,25 +88,34 @@ public class Listener extends Thread {
                             
                             //comprobar si yo fui el que envie la solicitud
                             //Descomponer id, grupo emisor y grupo receptor en esta parte
-                            id = "";
-                            grupoEmisor = "";
-                            grupoReceptor = "";
+                            id = parameter.split("\\{")[2].replace("}","").split(",")[0].split(":")[1];
+                            grupoReceptor = parameter.split("\\{")[2].replace("}","").split(",")[2].split(":")[1].replace("\"", "");
+                            grupoEmisor = parameter.split("\\{")[2].replace("}","").split(",")[1].split(":")[1].replace("\"", "");
+                            String usuarioEmisor = parameter.split("\\{")[2].replace("}","").split(",")[3].split(":")[1].replace("\"", "");
+                            String usuarioReceptor = parameter.split("\\{")[2].replace("}","").split(",")[4].split(":")[1].replace("\"", "");
+                            String mensaje = parameter.split("\\{")[2].replace("}","").split(",")[6].split(":")[1].replace("\"", "");
+                            String date = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date());
                             
-                            if(grupoEmisor.equals("1")){
-								 //comprobar si el update fue true or false descomponiendo el json
-								 String respuesta = "";
-								 //Comprobar cual fue la respuesta
-								 if(respuesta.equals("false")){
-									Singleton.getInstancia().setMensaje("El grupo " + grupoReceptor + " dice que no encontro el usuario." );
-									not = new Notificacion();
-									not.setVisible(true);
-								 }else{
-									Singleton.getInstancia().setMensaje("El grupo " + grupoReceptor + " dice que ha recibido el mensaje." );
-									not = new Notificacion();
-									not.setVisible(true);
-								 }
-								 //Eliminar la solicitud
-								 Singleton.getInstancia().Delete(id);
+                            if (mensaje.length() > 140){
+                                mensaje = mensaje.substring(0, 139);
+                            }
+                            
+                            if(grupoEmisor.equals("4")){
+                                 String respuesta = parameter.split("\\{")[2].replace("}","").split(",")[7].split(":")[1];
+                                 //Comprobar cual fue la respuesta
+                                 if(respuesta.equals("false")){
+                                    Singleton.getInstancia().setMensaje("El grupo " + grupoReceptor + " dice que no encontro el usuario: " + usuarioReceptor );
+                                    not = new Notificacion();
+                                    not.setVisible(true);
+                                 }else{
+                                    Singleton.getInstancia().setMensaje("El grupo " + grupoReceptor + " dice que ha recibido el mensaje." );
+                                    //se guarda mensaje para el usuario receptor
+                                    FileManager.WriteFile(FileManager.MESSAGE_FILE, FileManager.FixSize(usuarioEmisor  + FileManager.SEPARADOR + usuarioReceptor + " (grupo "+ grupoEmisor +")" + FileManager.SEPARADOR + date + FileManager.SEPARADOR + mensaje + FileManager.SEPARADOR + "1" +FileManager.SEPARADOR+ "1" + FileManager.SEPARADOR, 210));
+                                    not = new Notificacion();
+                                    not.setVisible(true);
+                                 }
+                                 //Eliminar la solicitud
+                                 Singleton.getInstancia().Delete(id);
                             }
                         }                                             
                     }
